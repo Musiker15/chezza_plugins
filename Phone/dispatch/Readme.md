@@ -42,4 +42,4 @@ Then type `npm run build`
 
 That's it. You can delete node_modules now and deploy the phone into the server
 
-### Made by Dimitar, requested by Musiker15
+### App made by Dimitri requested by me. I have permission to share it :)
