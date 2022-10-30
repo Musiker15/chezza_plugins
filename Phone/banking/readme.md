@@ -1,3 +1,5 @@
+## Banking App with okokBanking Support
+
 Go to `/phone/config/config.lua` and add this:
 
 ```lua
