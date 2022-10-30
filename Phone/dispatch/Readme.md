@@ -1,4 +1,5 @@
 ## Dispatch App for sending Dispatches
+![phone_dispatch_app](https://user-images.githubusercontent.com/49867381/198904098-3711e276-4a47-4e90-b6ed-94b349cabb73.png)
 
 Go to `phone/apps` and place the folder `sdispatch` located in the `lua` folder
 
