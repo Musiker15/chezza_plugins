@@ -1,3 +1,5 @@
+## Dispatch App for sending Dispatches
+
 Go to `phone/apps` and place the folder `sdispatch` located in the `lua` folder
 
 Go to `phone/config` and place the file `config.senddispatch.lua` located in the `lua` folder
@@ -39,4 +41,4 @@ Then type `npm run build`
 
 That's it. You can delete node_modules now and deploy the phone into the server
 
-## Made by Dimitar, requested by Musiker15
+### Made by Dimitar, requested by Musiker15
