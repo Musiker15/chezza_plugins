@@ -148,10 +148,10 @@ if Config.Shops then
                             if Config.TextUI:match('okok') then
                                 exports['okokTextUI']:Close()
                                 shopTextUIOpen = false
-                            elseif Config.textUI:match('esx') then
+                            elseif Config.TextUI:match('esx') then
                                 exports["esx_textui"]:HideUI()
                                 shopTextUIOpen = false
-                            elseif Config.textUI:match('renzu') then
+                            elseif Config.TextUI:match('renzu') then
                                 TriggerEvent('renzu_popui:closeui')
                                 shopTextUIOpen = false
                             end
