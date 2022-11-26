@@ -30,6 +30,13 @@ local currentEnterLoc = {}
 local currentMapBlip
 local propertyBlips = {}
 
+-- local oxInvName = 'property_' .. propertyID
+-- 			if exports['ox_inventory']:openInventory('stash', oxInvName) == false then
+-- 				TriggerServerEvent('ox:loadStash', oxInvName)
+-- 				exports['ox_inventory']:openInventory('stash', oxInvName)
+-- 				wardrobeMenu:Visible(not wardrobeMenu:Visible())
+-- 			end
+
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
 
@@ -43,6 +50,10 @@ AddEventHandler('esx:playerLoaded', function(xPlayer)
 					local name = props.property
 					for k2, v in pairs(properties) do
 						if v.name == name then
+						
+							-- hier muss eine abfrage rein, ob der spieler access hat. Wenn nein, muss onlyVisit gesetzt werden
+							-- um zu verhindern, dass man nach dem Rejoinen full access hat.
+						
 							propertyID = props.id
 							TriggerServerEvent('myProperties:enterProperty', tonumber(propertyName), v)
 						end
@@ -67,27 +78,44 @@ function refreshBlips()
 
 	for k, prop in pairs(properties) do
 		local coords = prop.entering
+
 		if prop.is_buyable then
 			if prop.is_unique then
-				for k2, owned in pairs(propertyOwner) do
-					if owned.property == prop.name then
-						prop.showBlip = false
-						-- Haus gehört jemandem
-						break
-					elseif k2 == #propertyOwner then
-						prop.showBlip = true
-						if Config.ShowAvailableBlips then
-							local blip = AddBlipForCoord(coords.x, coords.y)
-							SetBlipSprite(blip, 40)
-							SetBlipDisplay(blip, 6)
-							SetBlipScale(blip, 0.7)
-							SetBlipColour(blip, 4)
-							SetBlipAsShortRange(blip, true)
-							BeginTextCommandSetBlipName("STRING");
-							AddTextComponentString(Translation[Config.Locale]['blip_available_prop'].. 'Test')
-							EndTextCommandSetBlipName(blip)
-							table.insert(propertyBlips, blip)
+				if propertyOwner ~= nil and #propertyOwner > 0 then
+					for k2, owned in pairs(propertyOwner) do
+						if owned.property == prop.name then
+							prop.showBlip = false
+							-- Haus gehört jemandem
+							break
+						elseif k2 == #propertyOwner then
+							prop.showBlip = true
+							if Config.ShowAvailableBlips then
+								local blip = AddBlipForCoord(coords.x, coords.y)
+								SetBlipSprite(blip, 40)
+								SetBlipDisplay(blip, 6)
+								SetBlipScale(blip, 0.7)
+								SetBlipColour(blip, 4)
+								SetBlipAsShortRange(blip, true)
+								BeginTextCommandSetBlipName("STRING");
+								AddTextComponentString(Translation[Config.Locale]['blip_available_prop'])
+								EndTextCommandSetBlipName(blip)
+								table.insert(propertyBlips, blip)
+							end
 						end
+					end
+				else
+					prop.showBlip = true
+					if Config.ShowAvailableBlips then
+						local blip = AddBlipForCoord(coords.x, coords.y)
+						SetBlipSprite(blip, 40)
+						SetBlipDisplay(blip, 6)
+						SetBlipScale(blip, 0.7)
+						SetBlipColour(blip, 4)
+						SetBlipAsShortRange(blip, true)
+						BeginTextCommandSetBlipName("STRING");
+						AddTextComponentString(Translation[Config.Locale]['blip_available_prop'])
+						EndTextCommandSetBlipName(blip)
+						table.insert(propertyBlips, blip)
 					end
 				end
 			else
@@ -100,7 +128,7 @@ function refreshBlips()
 					SetBlipColour(blip, 4)
 					SetBlipAsShortRange(blip, true)
 					BeginTextCommandSetBlipName("STRING");
-					AddTextComponentString(Translation[Config.Locale]['blip_available_prop'] .. 'Test')
+					AddTextComponentString(Translation[Config.Locale]['blip_available_prop'] )
 					EndTextCommandSetBlipName(blip)
 					table.insert(propertyBlips, blip)
 				end	
@@ -117,7 +145,7 @@ function refreshBlips()
 				SetBlipColour(blip, 2)
 				SetBlipAsShortRange(blip, true)
 				BeginTextCommandSetBlipName("STRING");
-				AddTextComponentString(Translation[Config.Locale]['blip_prop_owned'].. 'Test')
+				AddTextComponentString(Translation[Config.Locale]['blip_prop_owned'])
 				EndTextCommandSetBlipName(blip)
 				table.insert(propertyBlips, blip)
 				--[[--]]
@@ -149,9 +177,11 @@ end
 
 Citizen.CreateThread(function()
 		
+
+	Citizen.Wait(3000)
+
 	if Config.Debug then
 		TriggerServerEvent('myProperties:getProperties') --DEBUG
-		print('gap')
 	end
 	
 	while not gotAllProperties do
@@ -637,28 +667,71 @@ function generateWardrobeMenu(owner)
 	
 
 	if not onlyVisit then
-		--local inventory_sub = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['store']) -- Ist Standardmäßig aktiviert!!!
+		local inventory_item
+		local inventory_sub
+		local tresor_sub
 
-		local inventory_item = NativeUI.CreateItem('Lager', '~b~Lager ein paar deiner Sachen')
-		wardrobeMenu:AddItem(inventory_item)
-		
-		inventory_item.Activated = function(sender, index)
-			for koP, oP in pairs(ownedProperties) do
-				-- For Singlechar
-				TriggerEvent('inventory:openHouse', ESX.GetPlayerData().identifier, propertyID, oP.property, 500)
-	
-				-- For Multichar
-				--TriggerEvent('inventory:openHouse', '', propertyID, oP.property, 500) -- checks only by propertyID // recommended!!
-	
-				-- For Multichar Support but you only can buy one House. Otherwise you have same Storage in all houses and characters
-				--TriggerEvent('inventory:openHouse', ESX.GetPlayerData().identifier, '', oP.property, 500) -- checks only by identifier // not recommended!!
+		if Config.useOxInventory then
+			inventory_item = NativeUI.CreateItem(Translation[Config.Locale]['store'], '~b~')
+			wardrobeMenu:AddItem(inventory_item)
+
+			inventory_item.Activated = function(sender, index)
+				--exports['linden_inventory']:OpenStash({ id = 'myProperty', slots = 20, owner = ESX.GetPlayerData().identifier()})
+				local oxInvName = 'property_' .. propertyID
+				if exports['ox_inventory']:openInventory('stash', oxInvName) == false then
+					TriggerServerEvent('ox:loadStash', oxInvName)
+					exports['ox_inventory']:openInventory('stash', oxInvName)
+					wardrobeMenu:Visible(not wardrobeMenu:Visible())
+				end
 			end
-			_menuPool:CloseAllMenus()
-		end
-		
-		--local tresor_sub = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['weaponary']) -- Ist Standardmäßig aktiviert!!!
+		elseif Config.useCoreInventory then
+			inventory_item = NativeUI.CreateItem(Translation[Config.Locale]['store'], '~b~')
+			wardrobeMenu:AddItem(inventory_item)
 
-		--[[ESX.TriggerServerCallback('myProperties:getPropertyInventory', function(inventory)
+			inventory_item.Activated = function(sender, index)
+				--exports['linden_inventory']:OpenStash({ id = 'myProperty', slots = 20, owner = ESX.GetPlayerData().identifier()})
+				local InvName = 'property_' .. propertyID
+				TriggerServerEvent('core_inventory:server:openInventory', InvName, "stash")
+				wardrobeMenu:Visible(not wardrobeMenu:Visible())
+			end
+		elseif Config.useChezzaInventory then
+			inventory_item = NativeUI.CreateItem(Translation[Config.Locale]['store'], '~b~')
+			wardrobeMenu:AddItem(inventory_item)
+
+			inventory_item.Activated = function(sender, index)
+				for koP, house in pairs(ownedProperties) do
+					if Config.sameInventory then
+						TriggerEvent('inventory:openInventory', {
+							type = "house_" .. house.id,
+							id = house.id,
+							title = house.property,
+							weight = 500,
+							delay = 250,
+							save = true
+						})
+					else
+						TriggerEvent('inventory:openInventory', {
+							type = "house_" .. house.id,
+							id = ESX.GetPlayerData().identifier,
+							title = house.property,
+							weight = 500,
+							delay = 250,
+							save = true
+						})
+					end
+				end
+
+				_menuPool:CloseAllMenus()
+			end
+		else
+			inventory_sub = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['store'])
+			tresor_sub = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['weaponary'])
+		end
+
+		
+		
+
+		ESX.TriggerServerCallback('myProperties:getPropertyInventory', function(inventory)
 
 			--local money = NativeUI.CreateItem('Bargeld: ', '~b~')
 			--money:RightLabel(inventory.money)
@@ -666,165 +739,183 @@ function generateWardrobeMenu(owner)
 			local inventoryItems = {}
 			local wepaonsList = inventory.weapons
 
-			for k, item in pairs(inventory.items) do
-				if item.count > 0 then
-					local invitem = NativeUI.CreateItem(item.label, '~b~')
-					invitem:RightLabel(item.count .. '~b~x')
-					if Config.useNativeUIReloaded then
-						inventory_sub.SubMenu:AddItem(invitem)
-					else
-						inventory_sub:AddItem(invitem)
+			if not Config.useOxInventory and not Config.useCoreInventory and not Config.useChezzaInventory then
+				for k, item in pairs(inventory.items) do
+					if item.count > 0 then
+						local invitem = NativeUI.CreateItem(item.label, '~b~')
+						invitem:RightLabel(item.count .. '~b~x')
+						if Config.useNativeUIReloaded then
+							inventory_sub.SubMenu:AddItem(invitem)
+						else
+							inventory_sub:AddItem(invitem)
+						end
+						
+						table.insert(inventoryItems, {
+							name = item.name,
+							label = item.label,
+							count = item.count,
+						})
 					end
-					
-					table.insert(inventoryItems, {
-						name = item.name,
-						label = item.label,
-						count = item.count,
-					})
+					--item.name
 				end
-				--item.name
+
+				for k, weapon in pairs(inventory.weapons) do
+					local weaponinv = NativeUI.CreateItem(ESX.GetWeaponLabel(weapon.name), '~b~')
+					weaponinv:RightLabel(weapon.ammo .. Translation[Config.Locale]['ammo']) 
+					
+					if Config.useNativeUIReloaded then
+						tresor_sub.SubMenu:AddItem(weaponinv)
+					else
+						tresor_sub:AddItem(weaponinv)
+					end
+					--weapon.name
+				end
 			end
 
-			for k, weapon in pairs(inventory.weapons) do
-				local weaponinv = NativeUI.CreateItem(ESX.GetWeaponLabel(weapon.name), '~b~')
-				weaponinv:RightLabel(weapon.ammo .. Translation[Config.Locale]['ammo']) 
-				
-				if Config.useNativeUIReloaded then
-					tresor_sub.SubMenu:AddItem(weaponinv)
-				else
-					tresor_sub:AddItem(weaponinv)
-				end
-				--weapon.name
-			end
+
+
 
 			if Config.useNativeUIReloaded then
-				inventory_sub.SubMenu.OnItemSelect = function(sender, item, index)
-					local res_amount = CreateDialog(Translation[Config.Locale]['insert_withdraw'])
+				if not Config.useOxInventory and not Config.useCoreInventory and not Config.useChezzaInventory then
+					inventory_sub.SubMenu.OnItemSelect = function(sender, item, index)
 
-					if tonumber(res_amount) then
-						local quantity = tonumber(res_amount)
-						TriggerServerEvent('myProperties:getItem', propertyID, 'item_standard', inventoryItems[index].name, quantity)
+						local res_amount = CreateDialog(Translation[Config.Locale]['insert_withdraw'])
+							if tonumber(res_amount) then
+								local quantity = tonumber(res_amount)
+								TriggerServerEvent('myProperties:getItem', propertyID, 'item_standard', inventoryItems[index].name, quantity)
+								_menuPool:CloseAllMenus()
+							end
+		
+					end
+
+					tresor_sub.SubMenu.OnItemSelect = function(sender, item, index)
+						TriggerServerEvent('myProperties:getItem', propertyID, 'item_weapon', wepaonsList[index].name, wepaonsList[index].ammo)
 						_menuPool:CloseAllMenus()
-					end	
+					end
 				end
-	
-				tresor_sub.SubMenu.OnItemSelect = function(sender, item, index)
-					TriggerServerEvent('myProperties:getItem', propertyID, 'item_weapon', wepaonsList[index].name, wepaonsList[index].ammo)
-					_menuPool:CloseAllMenus()
-				end
+
+				
 			else
-				inventory_sub.OnItemSelect = function(sender, item, index)
-					local res_amount = CreateDialog(Translation[Config.Locale]['insert_withdraw'])
+				if not Config.useOxInventory and not Config.useCoreInventory and not Config.useChezzaInventory then
+					inventory_sub.OnItemSelect = function(sender, item, index)
 
-					if tonumber(res_amount) then
-						local quantity = tonumber(res_amount)
-						TriggerServerEvent('myProperties:getItem', propertyID, 'item_standard', inventoryItems[index].name, quantity)
+						local res_amount = CreateDialog(Translation[Config.Locale]['insert_withdraw'])
+							if tonumber(res_amount) then
+								local quantity = tonumber(res_amount)
+								TriggerServerEvent('myProperties:getItem', propertyID, 'item_standard', inventoryItems[index].name, quantity)
+								_menuPool:CloseAllMenus()
+							end
+		
+					end
+
+					tresor_sub.OnItemSelect = function(sender, item, index)
+						TriggerServerEvent('myProperties:getItem', propertyID, 'item_weapon', wepaonsList[index].name, wepaonsList[index].ammo)
 						_menuPool:CloseAllMenus()
-					end	
+					end
 				end
 	
-				tresor_sub.OnItemSelect = function(sender, item, index)
-					TriggerServerEvent('myProperties:getItem', propertyID, 'item_weapon', wepaonsList[index].name, wepaonsList[index].ammo)
-					_menuPool:CloseAllMenus()
-				end
+				
 			end
+			
 
 			_menuPool:RefreshIndex()
 		end, propertyID)
 
-		--local putItem = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['store_item']) -- Ist Standardmäßig aktiviert!!!
+		if not Config.useOxInventory and not Config.useCoreInventory and not Config.useChezzaInventory then
+			local putItem = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['store_item'])
 
-		ESX.TriggerServerCallback('myProperties:getPlayerInventory', function(inventory)
-		
-			local itemstoSelect = {}
-
-			for k, itemininv in pairs(inventory.items) do
-				if itemininv.count > 0 then
-					local invitem = NativeUI.CreateItem(itemininv.label, '~b~')
-					invitem:RightLabel(itemininv.count .. '~b~x')
-					if Config.useNativeUIReloaded then
-						putItem.SubMenu:AddItem(invitem)
-					else
-						putItem:AddItem(invitem)
-					end
-
-					table.insert(itemstoSelect, {
-						type = 'item_standard',
-						name = itemininv.name,
-					})
-				end
-
-			end
-
-			local playerPed  = GetPlayerPed(-1)
-			local weaponList = ESX.GetWeaponList()
-
-			for k, weaponsininv in pairs(weaponList) do
-
-				local weaponHash = GetHashKey(weaponsininv.name)
-				if HasPedGotWeapon(playerPed,  weaponHash,  false) and weaponList[k].name ~= 'WEAPON_UNARMED' then
-					local ammo = GetAmmoInPedWeapon(playerPed, weaponHash)
-					local weaponitem = NativeUI.CreateItem(weaponsininv.label, '~b~')
-					weaponitem:RightLabel(ammo .. Translation[Config.Locale]['ammo'])
-					if Config.useNativeUIReloaded then
-						putItem.SubMenu:AddItem(weaponitem)
-					else
-						putItem:AddItem(weaponitem)
-					end
-					
-
-					table.insert(itemstoSelect, {
-						type = 'item_weapon',
-						name = weaponsininv.name,
-						ammo = ammo,
-					})
-				end
-
-			end
-
-			if Config.useNativeUIReloaded then
-				putItem.SubMenu.OnItemSelect = function(sender, item, index)
-				
-					local selectedItem = itemstoSelect[index]
-					
-					if selectedItem.type == 'item_weapon' then
-						print('got put item: ' .. selectedItem.name .. ' x' .. selectedItem.ammo)
-						TriggerServerEvent('myProperties:putItem', propertyID, 'item_weapon', selectedItem.name, selectedItem.ammo)
-						_menuPool:CloseAllMenus()
-					elseif selectedItem.type == 'item_standard' then
-						local res_amount = CreateDialog(Translation[Config.Locale]['insert_deposit'])
-						if tonumber(res_amount) then
-							local quantity = tonumber(res_amount)
-							TriggerServerEvent('myProperties:putItem', propertyID, 'item_standard', selectedItem.name, quantity)
-							_menuPool:CloseAllMenus()
-						end
-					end
-	
-				end
-			else
-				putItem.OnItemSelect = function(sender, item, index)
-				
-					local selectedItem = itemstoSelect[index]
-					
-					if selectedItem.type == 'item_weapon' then
-						print('got put item: ' .. selectedItem.name .. ' x' .. selectedItem.ammo)
-						TriggerServerEvent('myProperties:putItem', propertyID, 'item_weapon', selectedItem.name, selectedItem.ammo)
-						_menuPool:CloseAllMenus()
-					elseif selectedItem.type == 'item_standard' then
-						local res_amount = CreateDialog(Translation[Config.Locale]['insert_deposit'])
-						if tonumber(res_amount) then
-							local quantity = tonumber(res_amount)
-							TriggerServerEvent('myProperties:putItem', propertyID, 'item_standard', selectedItem.name, quantity)
-							_menuPool:CloseAllMenus()
-						end
-					end
-	
-				end
-			end
+			ESX.TriggerServerCallback('myProperties:getPlayerInventory', function(inventory)
 			
+				local itemstoSelect = {}
 
+				for k, itemininv in pairs(inventory.items) do
+					if itemininv.count > 0 then
+						local invitem = NativeUI.CreateItem(itemininv.label, '~b~')
+						invitem:RightLabel(itemininv.count .. '~b~x')
+						if Config.useNativeUIReloaded then
+							putItem.SubMenu:AddItem(invitem)
+						else
+							putItem:AddItem(invitem)
+						end
+
+						table.insert(itemstoSelect, {
+							type = 'item_standard',
+							name = itemininv.name,
+						})
+					end
+
+				end
+
+				local playerPed  = GetPlayerPed(-1)
+				local weaponList = ESX.GetWeaponList()
+
+				for k, weaponsininv in pairs(weaponList) do
+
+					local weaponHash = GetHashKey(weaponsininv.name)
+					if HasPedGotWeapon(playerPed,  weaponHash,  false) and weaponList[k].name ~= 'WEAPON_UNARMED' then
+						local ammo = GetAmmoInPedWeapon(playerPed, weaponHash)
+						local weaponitem = NativeUI.CreateItem(weaponsininv.label, '~b~')
+						weaponitem:RightLabel(ammo .. Translation[Config.Locale]['ammo'])
+						if Config.useNativeUIReloaded then
+							putItem.SubMenu:AddItem(weaponitem)
+						else
+							putItem:AddItem(weaponitem)
+						end
+						
+
+						table.insert(itemstoSelect, {
+							type = 'item_weapon',
+							name = weaponsininv.name,
+							ammo = ammo,
+						})
+					end
+
+				end
+
+				if Config.useNativeUIReloaded then
+					putItem.SubMenu.OnItemSelect = function(sender, item, index)
+					
+						local selectedItem = itemstoSelect[index]
+						
+						if selectedItem.type == 'item_weapon' then
+							print('got put item: ' .. selectedItem.name .. ' x' .. selectedItem.ammo)
+							TriggerServerEvent('myProperties:putItem', propertyID, 'item_weapon', selectedItem.name, selectedItem.ammo)
+							_menuPool:CloseAllMenus()
+						elseif selectedItem.type == 'item_standard' then
+							local res_amount = CreateDialog(Translation[Config.Locale]['insert_deposit'])
+							if tonumber(res_amount) then
+								local quantity = tonumber(res_amount)
+								TriggerServerEvent('myProperties:putItem', propertyID, 'item_standard', selectedItem.name, quantity)
+								_menuPool:CloseAllMenus()
+							end
+						end
 		
-		end)
+					end
+				else
+					putItem.OnItemSelect = function(sender, item, index)
+					
+						local selectedItem = itemstoSelect[index]
+						
+						if selectedItem.type == 'item_weapon' then
+							print('got put item: ' .. selectedItem.name .. ' x' .. selectedItem.ammo)
+							TriggerServerEvent('myProperties:putItem', propertyID, 'item_weapon', selectedItem.name, selectedItem.ammo)
+							_menuPool:CloseAllMenus()
+						elseif selectedItem.type == 'item_standard' then
+							local res_amount = CreateDialog(Translation[Config.Locale]['insert_deposit'])
+							if tonumber(res_amount) then
+								local quantity = tonumber(res_amount)
+								TriggerServerEvent('myProperties:putItem', propertyID, 'item_standard', selectedItem.name, quantity)
+								_menuPool:CloseAllMenus()
+							end
+						end
+		
+					end
+				end
+				
+
+			
+			end)
+		end
 
 		for k, props in pairs(propertyOwner) do
 			if propertyID == props.id then
@@ -836,7 +927,7 @@ function generateWardrobeMenu(owner)
 			end
 
 		end
-		--local propDeposit = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['wallet']) -- Ist Standardmäßig aktiviert!!!
+		local propDeposit = _menuPool:AddSubMenu(wardrobeMenu, Translation[Config.Locale]['wallet'])
 
 		local depositBalance = NativeUI.CreateItem(Translation[Config.Locale]['credit'], Translation[Config.Locale]['current_credit'] .. currentDeposit .. Translation[Config.Locale]['currency'])
 		depositBalance:RightLabel('~g~' .. currentDeposit .. Translation[Config.Locale]['currency'])
@@ -947,10 +1038,16 @@ function generateWardrobeMenu(owner)
 						TriggerServerEvent('myProperties:editPropDeposit', true, 'withdraw', quantity, propertyID)
 						_menuPool:CloseAllMenus()
 					end
-				end	
+				end
+	
 			end
-		end]]
+		end
+		
+
 	end
+
+	
+	
 	
 	wardrobeMenu:Visible(not wardrobeMenu:Visible())
 
