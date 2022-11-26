@@ -705,7 +705,7 @@ function generateWardrobeMenu(owner)
 							type = "house_" .. house.id,
 							id = house.id,
 							title = house.property,
-							weight = 500,
+							weight = Config.chezzaWeight,
 							delay = 250,
 							save = true
 						})
@@ -714,7 +714,7 @@ function generateWardrobeMenu(owner)
 							type = "house_" .. house.id,
 							id = ESX.GetPlayerData().identifier,
 							title = house.property,
-							weight = 500,
+							weight = Config.chezzaWeight,
 							delay = 250,
 							save = true
 						})
