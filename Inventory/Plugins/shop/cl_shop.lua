@@ -16,9 +16,9 @@ if Config.Shops then
             return
         end       
 
-        if T(jobs):includes(ESX.PlayerData.job.name) then 
+        if shop_job_contains(jobs.jobs, ESX.PlayerData.job.name) then 
             if grades then 
-                if T(grades):includes(ESX.PlayerData.job.grade) then 
+                if shop_grade_contains(jobs.jobs, ESX.PlayerData.job.grade) then 
                     canSee = true
                     OpenInventory({type = 'shop', id = 'shop', title = title, account = account, presetItems = items, timeout = Config.ShopDelay, weight = false})
                 else
@@ -33,17 +33,14 @@ if Config.Shops then
         end
     end
 
-    RegisterNetEvent('inventory:openShop', function (title, items)
-        OpenShop(title, items)
+    RegisterNetEvent('inventory:openShop', function (title, items, account, jobs, grades, license)
+        OpenShop(title, items, account, jobs, grades, license)
     end)
 
     if Config.ShopsBuiltIn then 
-        local isPedLoaded = false
-        local isNearShop = false
-        local npc = nil
-        local shopTextUIOpen = false
-        local hadSpeak = false
-        local currentShop = nil
+        local isPedLoaded, isNearShop = false, false
+        local npc, currentShop = nil, nil
+        local shopTextUIOpen, hadSpeak = false, false
         local Blips = {}
 
         RegisterNetEvent(Config.ESXPrefix..':playerLoaded')
@@ -63,97 +60,107 @@ if Config.Shops then
 
         CreateThread(function ()
             while true do
-                Wait(0)
+                local sleep = 200
                 isNearShop = false
-                for k,shops in pairs(Config.ShopLocations) do 
-                    for k2,location in pairs(shops.locations) do 
-                        --default: local distance = #(GetEntityCoords(PlayerPedId()) - location)
-                        local distance = Vdist(GetEntityCoords(PlayerPedId()), location.x, location.y, location.z)
 
-                        if shops.pedmodel ~= false then
-                            if distance < 25 then
-                                isNearShop = true
-                                currentShop = shops
+                for k, shops in pairs(Config.ShopLocations) do 
+                    for k2, location in pairs(shops.locations) do 
+                        if not shops.jobs.enable or ESX.PlayerData.job and shop_job_contains(shops.jobs.jobs, ESX.PlayerData.job.name) and shop_grade_contains(shops.jobs.jobs, ESX.PlayerData.job.grade) then
+                            local distance = Vdist(GetEntityCoords(PlayerPedId()), location.x, location.y, location.z)
 
-                                if not isPedLoaded then
-                                    RequestModel(GetHashKey(shops.pedmodel))
-                                    while not HasModelLoaded(GetHashKey(shops.pedmodel)) do
-                                        Wait(1)
-                                    end
-                                    npc = CreatePed(4, GetHashKey(shops.pedmodel), location.x, location.y, location.z - 1.0, location.rot, false, true)
-                                    FreezeEntityPosition(npc, true)	
-                                    SetEntityHeading(npc, location.rot)
-                                    SetEntityInvincible(npc, true)
-                                    SetBlockingOfNonTemporaryEvents(npc, true)
-                                    isPedLoaded = true
-                                end
-                            end
+                            if shops.pedmodel then
+                                if distance < 20 then
+                                    sleep = 0
+                                    isNearShop = true
+                                    currentShop = shops
 
-                            if Config.npcVoice then
-                                if distance < 5 and not hadSpeak then
-                                    PlayPedAmbientSpeechNative(npc, 'GENERIC_HI', 'SPEECH_PARAMS_FORCE_NO_REPEAT_FRONTEND')
-                                    hadSpeak = true
-                                elseif distance > 6 and distance < 8 and hadSpeak then
-                                    PlayPedAmbientSpeechNative(npc, 'GENERIC_BYE', 'SPEECH_PARAMS_FORCE_NO_REPEAT_FRONTEND')
-                                    hadSpeak = false
-                                end
-                            end
-                        else
-                            if distance <= 5.0 then 
-                                isNearShop = true
-                                currentShop = shops
-
-                                if isNearShop then
-                                    DrawMarker(27, location.x, location.y, location.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.6, 0.6, 255, 255, 255, 100, false, true, 0, false)
-                                    if shops.draw3dtext ~= false then
-                                        ESX.Game.Utils.DrawText3D(location, shops.draw3dtext.label, shops.draw3dtext.size)
+                                    if not isPedLoaded then
+                                        RequestModel(GetHashKey(shops.pedmodel))
+                                        while not HasModelLoaded(GetHashKey(shops.pedmodel)) do
+                                            Wait(1)
+                                        end
+                                        npc = CreatePed(4, GetHashKey(shops.pedmodel), location.x, location.y, location.z - 1.0, location.rot, false, true)
+                                        FreezeEntityPosition(npc, true)	
+                                        SetEntityHeading(npc, location.h)
+                                        SetEntityInvincible(npc, true)
+                                        SetBlockingOfNonTemporaryEvents(npc, true)
+                                        isPedLoaded = true
                                     end
                                 end
-                            end
-                        end
 
-                        if distance <= 2.5 then
-                            currentShop = shops
+                                if Config.npcVoice then
+                                    if distance < 4 and not hadSpeak then
+                                        sleep = 0
+                                        PlayPedAmbientSpeechNative(npc, 'GENERIC_HI', 'SPEECH_PARAMS_FORCE_NO_REPEAT_FRONTEND')
+                                        hadSpeak = true
+                                    elseif distance > 4.5 and distance < 6 and hadSpeak then
+                                        sleep = 0
+                                        PlayPedAmbientSpeechNative(npc, 'GENERIC_BYE', 'SPEECH_PARAMS_FORCE_NO_REPEAT_FRONTEND')
+                                        hadSpeak = false
+                                    end
+                                end
+                            else
+                                if distance <= 5.0 then 
+                                    sleep = 0
+                                    isNearShop = true
+                                    currentShop = shops
 
-                            if Config.TextUI:match('default') then
-                                SetTextComponentFormat('STRING')
-                                AddTextComponentString(Locales.shopOpenBtn)
-                                DisplayHelpTextFromStringLabel(0, 0, 1, -1)
-                            elseif Config.TextUI:match('okok') then
-                                if not shopTextUIOpen then
-                                    exports['okokTextUI']:Open('[E] Open ' .. v.label .. ' ', 'darkblue', 'left')
-                                    shopTextUIOpen = true
-                                end
-                            elseif Config.TextUI:match('esx') then
-                                if not shopTextUIOpen then
-                                    exports["esx_textui"]:TextUI('[E] Open ' .. shops.label .. ' ', 'info') -- 'info', 'success', 'error'
-                                    shopTextUIOpen = true
-                                end
-                            elseif Config.TextUI:match('renzu') then
-                                if not shopTextUIOpen then
-                                    local renzuTable = {
-                                        ['key'] = 'E', 
-                                        ['title'] = ' '..shops.label..' ', 
-                                        ['fa'] = '<i class="fad fa-shopping-basket"></i>'
-                                    }
-                                    TriggerEvent('renzu_popui:showui', renzuTable)
-                                    shopTextUIOpen = true
+                                    if isNearShop then
+                                        if shops.marker.enable then
+                                            DrawMarker(shops.marker.type, location.x, location.y, location.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, shops.marker.size.a, shops.marker.size.b, shops.marker.size.c, shops.marker.color.a, shops.marker.color.b, shops.marker.color.c, 100, false, true, 0, false)
+                                        end
+
+                                        if shops.text3d.enable then
+                                            ESX.Game.Utils.DrawText3D(location, shops.text3d.label, shops.text3d.size)
+                                        end
+                                    end
                                 end
                             end
 
-                            if IsControlJustReleased(0, 38) then 
-                                OpenShop(shops.label, shops.items, shops.addon_account_name, shops.jobs, shops.job_grades, shops.license)
-                            end
-                        elseif distance < 5 then
-                            if Config.TextUI:match('okok') then
-                                exports['okokTextUI']:Close()
-                                shopTextUIOpen = false
-                            elseif Config.TextUI:match('esx') then
-                                exports["esx_textui"]:HideUI()
-                                shopTextUIOpen = false
-                            elseif Config.TextUI:match('renzu') then
-                                TriggerEvent('renzu_popui:closeui')
-                                shopTextUIOpen = false
+                            if distance <= 2.5 then
+                                sleep = 0
+                                currentShop = shops
+
+                                if Config.shopTextUI.type:match('default') then
+                                    SetTextComponentFormat('STRING')
+                                    AddTextComponentString(Locales.shopOpenBtn)
+                                    DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+                                elseif Config.shopTextUI.type:match('okok') then
+                                    if not shopTextUIOpen then
+                                        exports['okokTextUI']:Open('[E] Open ' .. v.label .. ' ', Config.shopTextUI.color, Config.shopTextUI.position)
+                                        shopTextUIOpen = true
+                                    end
+                                elseif Config.shopTextUI.type:match('esx') then
+                                    if not shopTextUIOpen then
+                                        exports["esx_textui"]:TextUI('[E] Open ' .. shops.label .. ' ', Config.shopTextUI.esx)
+                                        shopTextUIOpen = true
+                                    end
+                                elseif Config.shopTextUI.type:match('renzu') then
+                                    if not shopTextUIOpen then
+                                        TriggerEvent('renzu_popui:showui', {
+                                            ['key'] = 'E', 
+                                            ['title'] = shops.label, 
+                                            ['fa'] = '<i class="fad fa-shopping-basket"></i>'
+                                        })
+                                        shopTextUIOpen = true
+                                    end
+                                end
+
+                                if IsControlJustReleased(0, Config.shopHotkey) then 
+                                    OpenShop(shops.label, shops.items, shops.addon_account_name, shops.jobs, shops.job_grades, shops.license)
+                                end
+                            elseif distance < 5 then
+                                sleep = 0
+                                if Config.shopTextUI.type:match('okok') then
+                                    exports['okokTextUI']:Close()
+                                    shopTextUIOpen = false
+                                elseif Config.shopTextUI.type:match('esx') then
+                                    exports["esx_textui"]:HideUI()
+                                    shopTextUIOpen = false
+                                elseif Config.shopTextUI.type:match('renzu') then
+                                    TriggerEvent('renzu_popui:closeui')
+                                    shopTextUIOpen = false
+                                end
                             end
                         end
                     end
@@ -166,55 +173,55 @@ if Config.Shops then
                     end
                     isPedLoaded = false
                 end
+
+                Wait(sleep)
             end
         end)
 
         function resetShopBlips()
             CreateThread(function ()
-                for k,v in pairs(Blips) do 
+                for k, v in pairs(Blips) do 
                     RemoveBlip(v)
-                    table.remove(Blips, k)
+                    Blips = {}
                 end
 
-                for k,shops in pairs(Config.ShopLocations) do
-                    if shops.blip then 
+                for k, shops in pairs(Config.ShopLocations) do
+                    if shops.blip.enable then 
                         local canSee = true
 
                         if shops.blip.hiddenForOthers then
                             canSee = false
-                            if shops.jobs then 
+
+                            if shops.jobs.enable then
                                 if ESX.PlayerData.job then 
-                                    if T(shops.jobs):includes(ESX.PlayerData.job.name) then 
-                                        if shops.job_grades then 
-                                            if T(shops.job_grades):includes(ESX.PlayerData.job.grade) then 
-                                                canSee = true
-                                            end
-                                        else 
+                                    if shop_job_contains(shops.jobs.jobs, ESX.PlayerData.job.name) then 
+                                        if shop_grade_contains(shops.jobs.jobs, ESX.PlayerData.job.grade) then
                                             canSee = true
+                                        else
+                                            canSee = false
                                         end
+                                    else
+                                        canSee = false
                                     end
-                                else 
+                                else
                                     canSee = false
                                 end
                             end
                         end
 
                         if canSee then 
-                            for k2,location in pairs(shops.locations) do 
-                                --default: local blip = AddBlipForCoord(location)
-                                if shops.blip ~= false then
-                                    local blip = AddBlipForCoord(location.x, location.y, location.z)
+                            for k2, location in pairs(shops.locations) do 
+                                local blip = AddBlipForCoord(location.x, location.y, location.z)
 
-                                    SetBlipSprite(blip, shops.blip.id)
-                                    SetBlipScale(blip, shops.blip.scale)
-                                    SetBlipDisplay(blip, 4)
-                                    SetBlipColour(blip, shops.blip.color)
-                                    SetBlipAsShortRange(blip, true)
-                                    BeginTextCommandSetBlipName("STRING")
-                                    AddTextComponentString(shops.label)
-                                    EndTextCommandSetBlipName(blip)      
-                                    table.insert(Blips, blip)
-                                end
+                                SetBlipSprite(blip, shops.blip.id)
+                                SetBlipScale(blip, shops.blip.scale)
+                                SetBlipDisplay(blip, 4)
+                                SetBlipColour(blip, shops.blip.color)
+                                SetBlipAsShortRange(blip, true)
+                                BeginTextCommandSetBlipName("STRING")
+                                AddTextComponentString(shops.label)
+                                EndTextCommandSetBlipName(blip)      
+                                table.insert(Blips, blip)
                             end
                         end
                     end
@@ -224,4 +231,22 @@ if Config.Shops then
 
         resetShopBlips()
     end
+end
+
+shop_job_contains = function(table, value)
+    for k, v in pairs(table) do
+        if v.job == value then
+            return true
+        end
+    end
+    return false
+end
+
+shop_grade_contains = function(table, value)
+    for k, v in pairs(table) do
+        if v.grade <= value then
+            return true
+        end
+    end
+    return false
 end
