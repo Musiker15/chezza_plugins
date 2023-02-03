@@ -19,7 +19,7 @@ Config.ShopLocations = {
             {job = 'police', grade = 0},
         }},
         addon_account_name = false, -- adds to specified account when player buys item, set to false to disable addon_account
-        blip = {enable = true, id = 59, color = 2, scale = 0.8, hiddenForOthers = true},
+        blip = {enable = true, id = 59, color = 2, scale = 0.8, hiddenForOthers = false},
         pedmodel = 'mp_m_shopkeep_01', -- 'mp_m_shopkeep_01' or false to use a Marker instead
         text3d = {enable = true, label = '~g~Open Werkbank', size = 0.8},
         marker = {enable = true, type = 27, size = {a = 0.6, b = 0.6, c = 0.6}, color = {a = 255, b = 255, c = 255}},
@@ -59,7 +59,7 @@ Config.ShopLocations = {
             {job = 'police', grade = 0},
         }},
         addon_account_name = false, -- adds to specified account when player buys item, set to false to disable addon_account
-        blip = {enable = true, id = 110, color = 1, scale = 0.8, hiddenForOthers = true},
+        blip = {enable = true, id = 110, color = 1, scale = 0.8, hiddenForOthers = false},
         pedmodel = 's_m_y_ammucity_01', -- 's_m_y_ammucity_01' or false to use a Marker instead
         text3d = {enable = true, label = '~g~Open Werkbank', size = 0.8},
         marker = {enable = true, type = 27, size = {a = 0.6, b = 0.6, c = 0.6}, color = {a = 255, b = 255, c = 255}},
