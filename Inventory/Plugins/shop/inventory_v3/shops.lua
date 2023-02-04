@@ -45,7 +45,7 @@ if Config.Shops then
 
         RegisterNetEvent('esx:playerLoaded')
         AddEventHandler('esx:playerLoaded', function(xPlayer, isNew)
-            ESX.PlayerData
+            ESX.PlayerData = xPlayer
             resetShopBlips()
         end)
 
