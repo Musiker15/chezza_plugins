@@ -45,6 +45,7 @@ if Config.Shops then
 
         RegisterNetEvent('esx:playerLoaded')
         AddEventHandler('esx:playerLoaded', function(xPlayer, isNew)
+            ESX.PlayerData
             resetShopBlips()
         end)
 
@@ -55,6 +56,7 @@ if Config.Shops then
         
         RegisterNetEvent('esx:setJob')
         AddEventHandler('esx:setJob', function(job)
+            ESX.PlayerData.job = job
             resetShopBlips()
         end)
 
