@@ -1,5 +1,5 @@
 Config.Shops = true -- toggle shops plugin | default: true
-Config.ShopsBuiltIn = true -- toggle shops built in, add your shops below in Config.ShopLocations | default: false
+Config.ShopsBuiltIn = false -- toggle shops built in, add your shops below in Config.ShopLocations | default: false
 Config.ShopDelay = 250 -- opening delay of the shop | default: 250
 
 Config.shopHotkey = 38

@@ -16,7 +16,7 @@ if Config.Shops then
             return
         end       
 
-        if shop_job_contains(jobs.jobs, ESX.PlayerData.job.name) then 
+        if not jobs.enable or shop_job_contains(jobs.jobs, ESX.PlayerData.job.name) then 
             if grades then 
                 if shop_grade_contains(jobs.jobs, ESX.PlayerData.job.grade) then 
                     canSee = true
