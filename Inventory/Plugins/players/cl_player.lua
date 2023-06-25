@@ -7,7 +7,7 @@ AddEventHandler('esx:onPlayerDeath', function() isPlayerDead = true end)
 AddEventHandler('esx:onPlayerSpawn', function(spawn) isPlayerDead = false end)
 
 AddEventHandler("inventory:open", function()
-    if isPlayerDead then -- IsPedDeadOrDying(PlayerPedId())
+    if isPlayerDead or IsPedDeadOrDying(PlayerPedId()) then
         CloseInventory()
     end
 end)
