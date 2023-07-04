@@ -86,7 +86,7 @@ RegisterNetEvent('inventory:moveItemToPlayer', function(item, count, otherInv)
 
     if otherInv.type == 'shop' then
         if item.type == 'item_weapon' then
-            if xPlayer.getAccount(item.method) >= item.count then 
+            if xPlayer.getAccount(item.method).money >= item.count then 
                 if not xPlayer.hasWeapon(item.name) then
                     --xPlayer.removeMoney(item.count)
                     xPlayer.removeAccountMoney(item.method, item.count)
@@ -102,7 +102,7 @@ RegisterNetEvent('inventory:moveItemToPlayer', function(item, count, otherInv)
         elseif item.type == 'item_standard' then
             if Config.PlayerWeight then
                 if xPlayer.canCarryItem(item.name, count) then
-                    if xPlayer.getAccount(item.method) >= (count * item.count) then
+                    if xPlayer.getAccount(item.method).money >= (count * item.count) then
                         --xPlayer.removeMoney(count * item.count)
                         xPlayer.removeAccountMoney(item.method, count * item.count)
                         xPlayer.addInventoryItem(item.name, count)
