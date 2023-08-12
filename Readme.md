@@ -1,6 +1,6 @@
-**Look in the folder of the property script you want to connect to the inventory.**
-
 **Chezza Inventory V5 is coming soon!**
+
+Look in the folder of the property script you want to connect to the inventory.
 
 **Usefull Links**\
 Store: <https://store.chezza.dev/>\
